@@ -3,7 +3,7 @@ name: helm package deployment to github
 on:
   workflow_dispatch:
   push:
-    branches: [ 'vevo_build' ]
+    branches: [ 'main' ]
     paths:
       - 'charts/n8n'
 
