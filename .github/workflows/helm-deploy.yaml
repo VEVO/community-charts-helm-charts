@@ -1,0 +1,50 @@
+name: helm package deployment to github
+
+on:
+  push:
+    branches: [ 'vevo_build' ]
+    paths:
+      - 'charts/n8n'
+
+env:
+  TEAM: infrastructure
+
+jobs:
+  helm:
+    permissions:
+      contents: read
+      packages: write
+    runs-on: vevo-ubuntu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          token: ${{ secrets.GIT_PACKAGE_TOKEN }}
+          version: v3.19.0
+
+      - name: Login to GHCR OCI registry
+        run: echo "${{ secrets.GIT_PACKAGE_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and Push the Helm Charts to GitHub Container Registry
+        uses: JimCronqvist/action-helm-chart-repo@master
+        with:
+          token: ${{ secrets.GIT_PACKAGE_TOKEN }}
+          chartsPath: ./charts/n8n
+
+      - name : Get slack channel
+        if: always()
+        id: string
+        uses: ASzc/change-string-case-action@v6
+        with:
+          string: ${{ env.TEAM }}_SLACK
+
+      - name: Slack status
+        if: always()
+        uses: kpritam/slack-job-status-action@v1
+        with:
+          job-status: ${{ job.status }}
+          slack-bot-token: ${{ secrets.GIT_ACTION_WORKFLOW_SLACK_BOT_TOKEN }}
+          channel: ${{ vars[steps.string.outputs.uppercase] }}
